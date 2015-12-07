@@ -33,6 +33,7 @@ import org.apache.cordova.LOG;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -326,7 +327,40 @@ public class CameraActivity extends Fragment {
 			
 			canTakePicture = false;
 
-			mPreview.setOneShotPreviewCallback(new Camera.PreviewCallback() {
+			final Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+
+				@Override
+				public void onPictureTaken(byte[] data, Camera camera) {
+
+					final File pictureFile = getOutputMediaFile("jpg");
+					if (pictureFile == null){
+						Log.d(TAG, "Cannot save a null picture ");
+						canTakePicture = true;
+						return;
+					}
+
+					try {
+						FileOutputStream fos = new FileOutputStream(pictureFile);
+						fos.write(data);
+						fos.close();
+						new Thread() {
+							public void run() {
+								eventListener.onPictureTaken(pictureFile.getAbsolutePath(), pictureFile.getAbsolutePath());
+							}
+						}.start();
+					} catch (FileNotFoundException e) {
+						Log.d(TAG, "File not found: " + e.getMessage());
+					} catch (IOException e) {
+						Log.d(TAG, "Error accessing file: " + e.getMessage());
+					} finally {
+						canTakePicture = true;
+					}
+				}
+			};
+
+			mCamera.takePicture(null, null, mPicture);
+
+			/*mPreview.setOneShotPreviewCallback(new Camera.PreviewCallback() {
 
 				@Override
 				public void onPreviewFrame(final byte[] data, final Camera camera) {
@@ -337,6 +371,7 @@ public class CameraActivity extends Fragment {
 							//raw picture
 							byte[] bytes = mPreview.getFramePicture(data, camera);
 							final Bitmap pic = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+							Log.d(TAG, "FramePicture bytes:"+bytes.length+" height:"+pic.getHeight()+" width:"+pic.getWidth());
 
 							//scale down
 							float scale = (float)pictureView.getWidth()/(float)pic.getWidth();
@@ -385,7 +420,7 @@ public class CameraActivity extends Fragment {
 						}
 					}.start();
 				}
-			});
+			});*/
 		}
 		else{
 			canTakePicture = true;
@@ -506,8 +541,9 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
     Camera mCamera;
     int cameraId;
     int displayOrientation;
+	private List<Camera.Size> mSupportedPictureSizes;
 
-    Preview(Context context) {
+	Preview(Context context) {
         super(context);
 
         mSurfaceView = new CustomSurfaceView(context);
@@ -526,10 +562,24 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
         mCamera = camera;
         this.cameraId = cameraId;
         if (mCamera != null) {
-            mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+			mSupportedPictureSizes = mCamera.getParameters().getSupportedPictureSizes();
+			for (Camera.Size s: mSupportedPictureSizes) {
+				Log.d(TAG, "Supported picture size: "+s.width+"x"+s.height);
+			}
+
+			mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+			for (Camera.Size s: mSupportedPreviewSizes) {
+				Log.d(TAG, "Supported preview size: "+s.width+"x"+s.height);
+			}
             setCameraDisplayOrientation();
             //mCamera.getParameters().setRotation(getDisplayOrientation());
             //requestLayout();
+            
+            // Issue 53
+            Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
+            Camera.Parameters params = mCamera.getParameters();
+			params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+			mCamera.setParameters(params);
         }
     }
 
@@ -583,6 +633,7 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
             camera.setPreviewDisplay(mHolder);
 	        Camera.Parameters parameters = camera.getParameters();
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+			parameters.setPictureSize(mPreviewSize.width, mPreviewSize.height); //FIXME
 	        camera.setParameters(parameters);
         }
         catch (IOException exception) {
@@ -706,13 +757,16 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
 
         // Cannot find the one match the aspect ratio, ignore the requirement
         if (optimalSize == null) {
-            minDiff = Double.MAX_VALUE;
-            for (Camera.Size size : sizes) {
-                if (Math.abs(size.height - targetHeight) < minDiff) {
-                    optimalSize = size;
-                    minDiff = Math.abs(size.height - targetHeight);
-                }
-            }
+        	// Issue 53
+        	Log.d(TAG, "Searching for optimalSize");
+			optimalSize = sizes.get(0);
+			for(int i=0;i < sizes.size(); i++) {
+				Camera.Size s = sizes.get(i);
+				Log.d(TAG, "Size "+s.width+"x"+s.height);
+				if(s.width > optimalSize.width) {
+					optimalSize = s;
+				}
+			}
         }
 
         Log.d(TAG, "optimal preview size: w: " + optimalSize.width + " h: " + optimalSize.height);
@@ -725,6 +779,7 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
 		    // the preview.
 		    Camera.Parameters parameters = mCamera.getParameters();
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+			parameters.setPictureSize(mPreviewSize.width, mPreviewSize.height); //FIXME
 		    requestLayout();
 		    //mCamera.setDisplayOrientation(90);
 		    mCamera.setParameters(parameters);
