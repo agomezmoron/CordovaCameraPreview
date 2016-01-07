@@ -25,7 +25,9 @@ CameraPreview.takePicture = function(size) {
   if (size) {
     params = [size.maxWidth, size.maxHeight];
   }
-  exec(null, null, PLUGIN_NAME, "takePicture", params);
+  return new Promise(function(resolve, reject){
+    exec(resolve, reject, PLUGIN_NAME, "takePicture", params);
+  });
 };
 
 CameraPreview.setColorEffect = function(effect) {
