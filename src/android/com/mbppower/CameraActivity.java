@@ -8,7 +8,6 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.ImageFormat;
-import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
@@ -37,6 +36,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -221,11 +222,11 @@ public class CameraActivity extends Fragment {
         cameraCurrentlyLocked = defaultCameraId;
         
         if(mPreview.mPreviewSize == null){
-		mPreview.setCamera(mCamera, cameraCurrentlyLocked);
-	} else {
-		mPreview.switchCamera(mCamera, cameraCurrentlyLocked);
-		mCamera.startPreview();
-	}
+		    mPreview.setCamera(mCamera, cameraCurrentlyLocked);
+        } else {
+            mPreview.switchCamera(mCamera, cameraCurrentlyLocked);
+            mCamera.startPreview();
+        }
 
 	    Log.d(TAG, "cameraCurrentlyLocked:" + cameraCurrentlyLocked);
 
@@ -360,67 +361,6 @@ public class CameraActivity extends Fragment {
 
 			mCamera.takePicture(null, null, mPicture);
 
-			/*mPreview.setOneShotPreviewCallback(new Camera.PreviewCallback() {
-
-				@Override
-				public void onPreviewFrame(final byte[] data, final Camera camera) {
-
-					new Thread() {
-						public void run() {
-
-							//raw picture
-							byte[] bytes = mPreview.getFramePicture(data, camera);
-							final Bitmap pic = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-							Log.d(TAG, "FramePicture bytes:"+bytes.length+" height:"+pic.getHeight()+" width:"+pic.getWidth());
-
-							//scale down
-							float scale = (float)pictureView.getWidth()/(float)pic.getWidth();
-							Bitmap scaledBitmap = Bitmap.createScaledBitmap(pic, (int)(pic.getWidth()*scale), (int)(pic.getHeight()*scale), false);
-
-							final Matrix matrix = new Matrix();
-							if (cameraCurrentlyLocked == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-								Log.d(TAG, "mirror y axis");
-								matrix.preScale(-1.0f, 1.0f);
-							}
-							Log.d(TAG, "preRotate " + mPreview.getDisplayOrientation() + "deg");
-							matrix.postRotate(mPreview.getDisplayOrientation());
-
-							final Bitmap fixedPic = Bitmap.createBitmap(scaledBitmap, 0, 0, scaledBitmap.getWidth(), scaledBitmap.getHeight(), matrix, false);
-							final Rect rect = new Rect(mPreview.mSurfaceView.getLeft(), mPreview.mSurfaceView.getTop(), mPreview.mSurfaceView.getRight(), mPreview.mSurfaceView.getBottom());
-
-							getActivity().runOnUiThread(new Runnable() {
-								@Override
-								public void run() {
-									pictureView.setImageBitmap(fixedPic);
-									pictureView.layout(rect.left, rect.top, rect.right, rect.bottom);
-
-									Bitmap finalPic = null;
-									//scale final picture
-									if(maxWidth > 0 && maxHeight > 0){
-										final double scaleHeight = maxWidth/(double)pic.getHeight();
-										final double scaleWidth = maxHeight/(double)pic.getWidth();
-										final double scale  = scaleHeight < scaleWidth ? scaleWidth : scaleHeight;
-										finalPic = Bitmap.createScaledBitmap(pic, (int)(pic.getWidth()*scale), (int)(pic.getHeight()*scale), false);
-									}
-									else{
-										finalPic = pic;
-									}
-
-									Bitmap originalPicture = Bitmap.createBitmap(finalPic, 0, 0, (int)(finalPic.getWidth()), (int)(finalPic.getHeight()), matrix, false);
-
-								    //get bitmap and compress
-								    Bitmap picture = loadBitmapFromView(view.findViewById(getResources().getIdentifier("frame_camera_cont", "id", appResourcesPackage)));
-								    ByteArrayOutputStream stream = new ByteArrayOutputStream();
-								    picture.compress(Bitmap.CompressFormat.PNG, 80, stream);
-
-									generatePictureFromView(originalPicture, picture);
-									canTakePicture = true;
-								}
-							});
-						}
-					}.start();
-				}
-			});*/
 		}
 		else{
 			canTakePicture = true;
@@ -465,9 +405,6 @@ public class CameraActivity extends Fragment {
     private File getOutputMediaFile(String suffix){
 
 	    File mediaStorageDir = getActivity().getApplicationContext().getFilesDir();
-	    /*if(Environment.getExternalStorageState() == Environment.MEDIA_MOUNTED && Environment.getExternalStorageState() != Environment.MEDIA_MOUNTED_READ_ONLY) {
-		    mediaStorageDir = new File(Environment.getExternalStorageDirectory() + "/Android/data/" + getActivity().getApplicationContext().getPackageName() + "/Files");
-	    }*/
         if (! mediaStorageDir.exists()){
             if (! mediaStorageDir.mkdirs()){
                 return null;
@@ -530,6 +467,18 @@ public class CameraActivity extends Fragment {
     }
 }
 
+class CameraSizeComparator implements Comparator<Camera.Size> {
+
+    @Override
+    public int compare(Camera.Size lhs, Camera.Size rhs) {
+        final int w = Integer.compare(lhs.width, rhs.width);
+        if (w != 0) {
+            return w;
+        }
+
+        return Integer.compare(lhs.height, rhs.height);
+    }
+}
 
 class Preview extends RelativeLayout implements SurfaceHolder.Callback {
     private final String TAG = "Preview";
@@ -537,11 +486,12 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
     CustomSurfaceView mSurfaceView;
     SurfaceHolder mHolder;
     Camera.Size mPreviewSize;
+    Camera.Size mPictureSize;
     List<Camera.Size> mSupportedPreviewSizes;
+    List<Camera.Size> mSupportedPictureSizes;
     Camera mCamera;
     int cameraId;
     int displayOrientation;
-	private List<Camera.Size> mSupportedPictureSizes;
 
 	Preview(Context context) {
         super(context);
@@ -563,18 +513,18 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
         this.cameraId = cameraId;
         if (mCamera != null) {
 			mSupportedPictureSizes = mCamera.getParameters().getSupportedPictureSizes();
-			for (Camera.Size s: mSupportedPictureSizes) {
+            Collections.sort(mSupportedPictureSizes, new CameraSizeComparator());
+            for (Camera.Size s: mSupportedPictureSizes) {
 				Log.d(TAG, "Supported picture size: "+s.width+"x"+s.height);
 			}
 
 			mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+            Collections.sort(mSupportedPreviewSizes, new CameraSizeComparator());
 			for (Camera.Size s: mSupportedPreviewSizes) {
 				Log.d(TAG, "Supported preview size: "+s.width+"x"+s.height);
 			}
             setCameraDisplayOrientation();
-            //mCamera.getParameters().setRotation(getDisplayOrientation());
-            //requestLayout();
-            
+
             // Issue 53
             Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
             Camera.Parameters params = mCamera.getParameters();
@@ -633,7 +583,7 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
             camera.setPreviewDisplay(mHolder);
 	        Camera.Parameters parameters = camera.getParameters();
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-			parameters.setPictureSize(mPreviewSize.width, mPreviewSize.height); //FIXME
+			parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
 	        camera.setParameters(parameters);
         }
         catch (IOException exception) {
@@ -652,7 +602,10 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
         setMeasuredDimension(width, height);
 
         if (mSupportedPreviewSizes != null) {
-            mPreviewSize = getOptimalPreviewSize(mSupportedPreviewSizes, width, height);
+            mPreviewSize = getOptimalImageSize(mSupportedPreviewSizes, width, height, null);
+        }
+        if (mSupportedPictureSizes != null) {
+            mPictureSize = getOptimalImageSize(mSupportedPictureSizes, width, height, mPreviewSize);
         }
     }
 
@@ -732,7 +685,8 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
             mCamera.stopPreview();
         }
     }
-    private Camera.Size getOptimalPreviewSize(List<Camera.Size> sizes, int w, int h) {
+
+    private Camera.Size getOptimalImageSize(List<Camera.Size> sizes, int w, int h, Camera.Size reference) {
         final double ASPECT_TOLERANCE = 0.1;
         double targetRatio = (double) w / h;
         if (displayOrientation == 90 || displayOrientation == 270) {
@@ -745,6 +699,8 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
 
         int targetHeight = h;
 
+        Log.d(TAG, "Searching optimal size: aspect ratio " + targetRatio);
+
         // Try to find an size match aspect ratio and size
         for (Camera.Size size : sizes) {
             double ratio = (double) size.width / size.height;
@@ -752,24 +708,34 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
             if (Math.abs(size.height - targetHeight) < minDiff) {
                 optimalSize = size;
                 minDiff = Math.abs(size.height - targetHeight);
+                Log.d(TAG, "Candidate w: " + optimalSize.width + " h: " + optimalSize.height +"; new height target threshold is " + minDiff);
+
+                if (reference != null && optimalSize.width >= reference.width && optimalSize.height >= reference.height) {
+                    Log.d(TAG, "Candidate closest to reference found; w: " + optimalSize.width + " h: " + optimalSize.height);
+                    return optimalSize;
+                }
             }
         }
 
         // Cannot find the one match the aspect ratio, ignore the requirement
         if (optimalSize == null) {
         	// Issue 53
-        	Log.d(TAG, "Searching for optimalSize");
+        	Log.d(TAG, "No optimal size found, searching for widest preview");
 			optimalSize = sizes.get(0);
 			for(int i=0;i < sizes.size(); i++) {
 				Camera.Size s = sizes.get(i);
 				Log.d(TAG, "Size "+s.width+"x"+s.height);
-				if(s.width > optimalSize.width) {
+				if(s.width >= optimalSize.width) {
 					optimalSize = s;
+                    if (reference != null && optimalSize.width >= reference.width && optimalSize.height >= reference.height) {
+                        Log.d(TAG, "Candidate closest to reference found; w: " + optimalSize.width + " h: " + optimalSize.height);
+                        return optimalSize;
+                    }
 				}
 			}
         }
 
-        Log.d(TAG, "optimal preview size: w: " + optimalSize.width + " h: " + optimalSize.height);
+        Log.d(TAG, "chosen size: w: " + optimalSize.width + " h: " + optimalSize.height);
         return optimalSize;
     }
 
@@ -781,7 +747,7 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
 			parameters.setPictureSize(mPreviewSize.width, mPreviewSize.height); //FIXME
 		    requestLayout();
-		    //mCamera.setDisplayOrientation(90);
+
 		    mCamera.setParameters(parameters);
 		    mCamera.startPreview();
 	    }
