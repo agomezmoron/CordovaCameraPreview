@@ -745,7 +745,7 @@ class Preview extends RelativeLayout implements SurfaceHolder.Callback {
 		    // the preview.
 		    Camera.Parameters parameters = mCamera.getParameters();
             parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-			parameters.setPictureSize(mPreviewSize.width, mPreviewSize.height); //FIXME
+			parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
 		    requestLayout();
 
 		    mCamera.setParameters(parameters);
