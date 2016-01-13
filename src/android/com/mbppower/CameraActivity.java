@@ -471,12 +471,12 @@ class CameraSizeComparator implements Comparator<Camera.Size> {
 
     @Override
     public int compare(Camera.Size lhs, Camera.Size rhs) {
-        final int w = Integer.compare(lhs.width, rhs.width);
+        final int w = new Integer(lhs.width).compareTo(new Integer(rhs.width));
         if (w != 0) {
             return w;
         }
 
-        return Integer.compare(lhs.height, rhs.height);
+        return new Integer(lhs.height).compareTo(new Integer(rhs.height));
     }
 }
 
