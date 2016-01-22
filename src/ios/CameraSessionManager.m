@@ -151,6 +151,12 @@
                         [self setVideoDeviceInput:videoDeviceInput];
                 }
 
+                if ([self.session canSetSessionPreset:AVCaptureSessionPreset1280x720]) {
+                    self.session.sessionPreset = AVCaptureSessionPreset1280x720;
+                } else {
+                    NSLog(@"Cannot preset AVCaptureSessionPreset1280x720");
+                }
+
                 [self updateOrientation:[self getCurrentOrientation]];
                 [self.session commitConfiguration];
         });
