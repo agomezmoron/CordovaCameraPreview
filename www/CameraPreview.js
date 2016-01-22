@@ -14,7 +14,9 @@ CameraPreview.setOnPictureTakenHandler = function(onPictureTaken) {
 //@param defaultCamera "front" | "back"
 CameraPreview.startCamera = function(rect, defaultCamera, tapEnabled, dragEnabled, toBack, alpha) {
   if (typeof(alpha) === 'undefined') alpha = 1;
-  exec(null, null, PLUGIN_NAME, "startCamera", [rect.x, rect.y, rect.width, rect.height, defaultCamera, !!tapEnabled, !!dragEnabled, !!toBack, alpha]);
+  return new Promise(function(resolve, reject){
+    exec(resolve, reject, PLUGIN_NAME, "startCamera", [rect.x, rect.y, rect.width, rect.height, defaultCamera, !!tapEnabled, !!dragEnabled, !!toBack, alpha]);
+  });
 };
 CameraPreview.stopCamera = function() {
   exec(null, null, PLUGIN_NAME, "stopCamera", []);

@@ -9,10 +9,6 @@
 
 #import "CameraSessionManager.h"
 
-@protocol TakePictureDelegate
-- (void) invokeTakePicture;
-@end;
-
 @interface CameraRenderController : UIViewController <AVCaptureVideoDataOutputSampleBufferDelegate> {
         GLuint _renderBuffer;
         CVOpenGLESTextureCacheRef _videoTextureCache;

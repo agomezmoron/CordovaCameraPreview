@@ -127,20 +127,6 @@
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
-- (void) takePicture:(CDVInvokedUrlCommand*)command {
-        NSLog(@"takePicture");
-        CDVPluginResult *pluginResult;
-
-        if (self.cameraRenderController != NULL) {
-                CGFloat maxW = (CGFloat)[command.arguments[0] floatValue];
-                CGFloat maxH = (CGFloat)[command.arguments[1] floatValue];
-                [self invokeTakePicture:maxW withHeight:maxH];
-        } else {
-                pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Camera not started"];
-                [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
-        }
-}
-
 -(void) setOnPictureTakenHandler:(CDVInvokedUrlCommand*)command {
         NSLog(@"setOnPictureTakenHandler");
         self.onPictureTakenHandlerId = command.callbackId;
@@ -185,14 +171,27 @@
 
         [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
-- (void) invokeTakePicture {
-        [self invokeTakePicture:0.0 withHeight:0.0];
+
+- (void) takePicture:(CDVInvokedUrlCommand*)command {
+    NSLog(@"takePicture");
+    CDVPluginResult *pluginResult;
+    
+    if (self.cameraRenderController != NULL) {
+        CGFloat maxW = (CGFloat)[command.arguments[0] floatValue];
+        CGFloat maxH = (CGFloat)[command.arguments[1] floatValue];
+        [self invokeTakePicture:maxW withHeight:maxH command:command];
+    } else {
+        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Camera not started"];
+        [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
+    }
 }
+
 + (NSString *) applicationDocumentsDirectory {
     NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
     NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
     return basePath;
 }
+
 + (NSString *)saveImage:(UIImage *)image withName:(NSString *)name {
     NSData *data = UIImageJPEGRepresentation(image, 1.0);
     NSFileManager *fileManager = [NSFileManager defaultManager];
@@ -202,7 +201,7 @@
     return fullPath;
 }
 
-- (void) invokeTakePicture:(CGFloat) maxWidth withHeight:(CGFloat) maxHeight {
+- (void) invokeTakePicture:(CGFloat) maxWidth withHeight:(CGFloat) maxHeight command:(CDVInvokedUrlCommand*)command{
     NSLog(@"invoke take picture");
     AVCaptureConnection *connection = [self.sessionManager.stillImageOutput connectionWithMediaType:AVMediaTypeVideo];
     [self.sessionManager.stillImageOutput captureStillImageAsynchronouslyFromConnection:connection completionHandler:^(CMSampleBufferRef sampleBuffer, NSError *error) {
@@ -210,7 +209,9 @@
         NSLog(@"Done creating still image");
         
         if (error) {
-            NSLog(@"%@", error);
+            NSLog(@"Error taking picture: %@", error);
+            CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Camera not started"];
+            [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         } else {
             
             NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:sampleBuffer];

@@ -59,14 +59,14 @@
                                 [videoDevice setFlashMode:AVCaptureFlashModeAuto];
                                 [videoDevice unlockForConfiguration];
                         } else {
-                                NSLog(@"%@", error);
+                                NSLog(@"Error during AV device setup: %@", error);
                         }
                 }
 
                 AVCaptureDeviceInput *videoDeviceInput = [AVCaptureDeviceInput deviceInputWithDevice:videoDevice error:&error];
 
                 if (error) {
-                        NSLog(@"%@", error);
+                        NSLog(@"Error initializing camera: %@", error);
                 }
 
                 if ([self.session canAddInput:videoDeviceInput]) {

@@ -5,7 +5,7 @@
 #import "CameraSessionManager.h"
 #import "CameraRenderController.h"
 
-@interface CameraPreview : CDVPlugin <TakePictureDelegate>
+@interface CameraPreview : CDVPlugin <NSObject>
 
 - (void) startCamera:(CDVInvokedUrlCommand*)command;
 - (void) stopCamera:(CDVInvokedUrlCommand*)command;
@@ -16,8 +16,7 @@
 - (void) setOnPictureTakenHandler:(CDVInvokedUrlCommand*)command;
 - (void) setColorEffect:(CDVInvokedUrlCommand*)command;
 
-- (void) invokeTakePicture:(CGFloat) maxWidth withHeight:(CGFloat) maxHeight;
-- (void) invokeTakePicture;
+- (void) invokeTakePicture:(CGFloat) maxWidth withHeight:(CGFloat) maxHeight command:(CDVInvokedUrlCommand*) command;
 
 @property (nonatomic) CameraSessionManager *sessionManager;
 @property (nonatomic) CameraRenderController *cameraRenderController;

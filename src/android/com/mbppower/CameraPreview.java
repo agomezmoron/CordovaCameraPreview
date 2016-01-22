@@ -66,8 +66,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
     	return false;
     }
 
-	private boolean startCamera(final JSONArray args, CallbackContext callbackContext) {
+	private boolean startCamera(final JSONArray args, final CallbackContext callbackContext) {
         if(fragment != null){
+        	PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
+			pluginResult.setKeepCallback(true);
+			callbackContext.sendPluginResult(pluginResult);
 	        return false;
         }
 		fragment = new CameraActivity();
@@ -118,6 +121,9 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 					FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
 					fragmentTransaction.add(containerView.getId(), fragment);
 					fragmentTransaction.commit();
+					PluginResult pluginResult = new PluginResult(PluginResult.Status.OK);
+					pluginResult.setKeepCallback(false);
+					callbackContext.sendPluginResult(pluginResult);
 				}
 				catch(Exception e){
 					e.printStackTrace();

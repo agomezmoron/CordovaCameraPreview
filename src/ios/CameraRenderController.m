@@ -55,13 +55,6 @@
                 [self.view addGestureRecognizer:drag];
         }
 
-        if (self.tapToTakePicture) {
-                //tap to take picture
-                UITapGestureRecognizer *takePictureTap =
-                        [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTakePictureTap:)];
-                [self.view addGestureRecognizer:takePictureTap];
-        }
-
         self.view.userInteractionEnabled = self.dragEnabled || self.tapToTakePicture;
 }
 
@@ -99,11 +92,6 @@
                 NSLog(@"Stopping session");
                 [self.sessionManager.session stopRunning];
         });
-}
-
-- (void) handleTakePictureTap:(UITapGestureRecognizer*)recognizer {
-        NSLog(@"handleTakePictureTap");
-        [self.delegate invokeTakePicture];
 }
 
 - (IBAction)handlePan:(UIPanGestureRecognizer *)recognizer {
