@@ -4,26 +4,29 @@ import android.app.Activity;
 import android.app.Fragment;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.ImageFormat;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
 import android.os.Bundle;
-import android.util.Log;
 import android.util.DisplayMetrics;
-import android.view.GestureDetector;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
+import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
+import android.view.WindowManager;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -40,6 +43,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class CameraActivity extends Fragment {
 
@@ -48,6 +52,7 @@ public class CameraActivity extends Fragment {
 	}
 
 	private CameraPreviewListener eventListener;
+	private SimpleOrientationListener orientationListener;
 	private static final String TAG = "CameraActivity";
 	public FrameLayout mainLayout;
 	public FrameLayout frameContainerLayout;
@@ -89,8 +94,9 @@ public class CameraActivity extends Fragment {
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+		super.onCreate(savedInstanceState);
     }
+
 	public void setRect(int x, int y, int width, int height){
 		this.x = x;
 		this.y = y;
@@ -99,6 +105,11 @@ public class CameraActivity extends Fragment {
 	}
 
 	private void createCameraPreview(){
+
+		if (orientationListener == null) {
+			orientationListener = new SimpleOrientationListener(this.getActivity().getApplicationContext());
+		}
+
         if(mPreview == null) {
             setDefaultCameraId();
 
@@ -114,8 +125,6 @@ public class CameraActivity extends Fragment {
 	        mainLayout.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
 	        mainLayout.addView(mPreview);
 	        mainLayout.setEnabled(false);
-
-	        final GestureDetector gestureDetector = new GestureDetector(getActivity().getApplicationContext(), new TapGestureDetector());
 
 	        getActivity().runOnUiThread(new Runnable() {
 		        @Override
@@ -200,6 +209,7 @@ public class CameraActivity extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
+		orientationListener.enable();
 
         mCamera = Camera.open(defaultCameraId);
 
@@ -239,7 +249,7 @@ public class CameraActivity extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-
+		orientationListener.disable();
         // Because the Camera object is a shared resource, it's very
         // important to release it when the activity is paused.
         if (mCamera != null) {
@@ -250,7 +260,7 @@ public class CameraActivity extends Fragment {
     }
 
     public Camera getCamera() {
-      return mCamera;
+		return mCamera;
     }
 
     public void switchCamera() {
@@ -321,6 +331,34 @@ public class CameraActivity extends Fragment {
 				@Override
 				public void onPictureTaken(byte[] data, Camera camera) {
 
+					final int orientation = orientationListener.getCurrentOrientation();
+					Log.d(TAG, "Current device orientation: " + orientation);
+
+					final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+					final Matrix matrix = new Matrix();
+					switch(orientation){
+						case Surface.ROTATION_0:
+							matrix.postRotate(90);
+							Log.d(TAG, "Rotating 90°");
+							break;
+						case Surface.ROTATION_90:
+							matrix.postRotate(180);
+							Log.d(TAG, "Rotating 180°");
+							break;
+						case Surface.ROTATION_180:
+							matrix.postRotate(-90);
+							Log.d(TAG, "Rotating -90°");
+							break;
+						case Surface.ROTATION_270:
+							matrix.postRotate(0);
+							Log.d(TAG, "Rotating 0°");
+							break;
+						default:
+							matrix.postRotate(0);
+							Log.d(TAG, "Rotating 0° (unknown orientation)");
+					}
+					final Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+
 					final File pictureFile = getOutputMediaFile("jpg");
 					if (pictureFile == null){
 						Log.d(TAG, "Cannot save a null picture ");
@@ -330,7 +368,7 @@ public class CameraActivity extends Fragment {
 
 					try {
 						FileOutputStream fos = new FileOutputStream(pictureFile);
-						fos.write(data);
+						rotated.compress(Bitmap.CompressFormat.JPEG, 100, fos);
 						fos.close();
 						new Thread() {
 							public void run() {
@@ -453,352 +491,438 @@ public class CameraActivity extends Fragment {
     public void onDestroy() {
         super.onDestroy();
     }
-}
 
-class CameraSizeComparator implements Comparator<Camera.Size> {
+	public static class SimpleOrientationListener extends OrientationEventListener {
 
-    @Override
-    public int compare(Camera.Size lhs, Camera.Size rhs) {
-        final int w = new Integer(lhs.width).compareTo(new Integer(rhs.width));
-        if (w != 0) {
-            return w;
+        private volatile int defaultScreenOrientation = Configuration.ORIENTATION_UNDEFINED;
+        public int prevOrientation = OrientationEventListener.ORIENTATION_UNKNOWN;
+        private Context ctx;
+        private ReentrantLock lock = new ReentrantLock(true);
+        private int currentOrientation = Configuration.ORIENTATION_UNDEFINED;
+
+        public SimpleOrientationListener(Context context) {
+            super(context);
+            ctx = context;
         }
 
-        return new Integer(lhs.height).compareTo(new Integer(rhs.height));
-    }
-}
-
-class Preview extends RelativeLayout implements SurfaceHolder.Callback {
-    private final String TAG = "Preview";
-
-    CustomSurfaceView mSurfaceView;
-    SurfaceHolder mHolder;
-    Camera.Size mPreviewSize;
-    Camera.Size mPictureSize;
-    List<Camera.Size> mSupportedPreviewSizes;
-    List<Camera.Size> mSupportedPictureSizes;
-    Camera mCamera;
-    int cameraId;
-    int displayOrientation;
-
-	Preview(Context context) {
-        super(context);
-
-        mSurfaceView = new CustomSurfaceView(context);
-        addView(mSurfaceView);
-
-        requestLayout();
-
-        // Install a SurfaceHolder.Callback so we get notified when the
-        // underlying surface is created and destroyed.
-        mHolder = mSurfaceView.getHolder();
-        mHolder.addCallback(this);
-        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-    }
-
-    public void setCamera(Camera camera, int cameraId) {
-        mCamera = camera;
-        this.cameraId = cameraId;
-        if (mCamera != null) {
-			mSupportedPictureSizes = mCamera.getParameters().getSupportedPictureSizes();
-            Collections.sort(mSupportedPictureSizes, new CameraSizeComparator());
-            for (Camera.Size s: mSupportedPictureSizes) {
-				Log.d(TAG, "Supported picture size: "+s.width+"x"+s.height);
-			}
-
-			mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
-            Collections.sort(mSupportedPreviewSizes, new CameraSizeComparator());
-			for (Camera.Size s: mSupportedPreviewSizes) {
-				Log.d(TAG, "Supported preview size: "+s.width+"x"+s.height);
-			}
-            setCameraDisplayOrientation();
-
-            // Issue 53
-            Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
-            Camera.Parameters params = mCamera.getParameters();
-			params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
-			mCamera.setParameters(params);
-        }
-    }
-
-    public int getDisplayOrientation() {
-    	return displayOrientation;
-    }
-
-    private void setCameraDisplayOrientation() {
-        Camera.CameraInfo info=new Camera.CameraInfo();
-        int rotation=
-            ((Activity)getContext()).getWindowManager().getDefaultDisplay()
-                         .getRotation();
-        int degrees=0;
-        DisplayMetrics dm=new DisplayMetrics();
-
-        Camera.getCameraInfo(cameraId, info);
-        ((Activity)getContext()).getWindowManager().getDefaultDisplay().getMetrics(dm);
-
-        switch (rotation) {
-            case Surface.ROTATION_0:
-                degrees=0;
-                break;
-            case Surface.ROTATION_90:
-                degrees=90;
-                break;
-            case Surface.ROTATION_180:
-                degrees=180;
-                break;
-            case Surface.ROTATION_270:
-                degrees=270;
-                break;
+        public SimpleOrientationListener(Context context, int rate) {
+            super(context, rate);
+            ctx = context;
         }
 
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-        	displayOrientation=(info.orientation + degrees) % 360;
-        	displayOrientation=(360 - displayOrientation) % 360;
-        } else {
-        	displayOrientation=(info.orientation - degrees + 360) % 360;
-        }
-
-        Log.d(TAG, "screen is rotated " + degrees + "deg from natural");
-        Log.d(TAG, (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT ? "front" : "back")
-        	+ " camera is oriented -" + info.orientation + "deg from natural");
-        Log.d(TAG, "need to rotate preview " + displayOrientation + "deg");
-        mCamera.setDisplayOrientation(displayOrientation);
-    }
-
-    public void switchCamera(Camera camera, int cameraId) {
-        setCamera(camera, cameraId);
-        try {
-            camera.setPreviewDisplay(mHolder);
-	        Camera.Parameters parameters = camera.getParameters();
-            parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-			parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
-	        camera.setParameters(parameters);
-        }
-        catch (IOException exception) {
-            Log.e(TAG, exception.getMessage());
-        }
-        //requestLayout();
-    }
-
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        // We purposely disregard child measurements because act as a
-        // wrapper to a SurfaceView that centers the camera preview instead
-        // of stretching it.
-        final int width = resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec);
-        final int height = resolveSize(getSuggestedMinimumHeight(), heightMeasureSpec);
-        setMeasuredDimension(width, height);
-
-        if (mSupportedPreviewSizes != null) {
-            mPreviewSize = getOptimalImageSize(mSupportedPreviewSizes, width, height, null);
-        }
-        if (mSupportedPictureSizes != null) {
-            mPictureSize = getOptimalImageSize(mSupportedPictureSizes, width, height, mPreviewSize);
-        }
-    }
-
-    @Override
-    protected void onLayout(boolean changed, int l, int t, int r, int b) {
-
-        if (changed && getChildCount() > 0) {
-            final View child = getChildAt(0);
-
-            int width = r - l;
-            int height = b - t;
-
-            int previewWidth = width;
-            int previewHeight = height;
-
-            if (mPreviewSize != null) {
-                previewWidth = mPreviewSize.width;
-                previewHeight = mPreviewSize.height;
-
-                if(displayOrientation == 90 || displayOrientation == 270) {
-                    previewWidth = mPreviewSize.height;
-                    previewHeight = mPreviewSize.width;
-                }
-
-	            LOG.d(TAG, "previewWidth:" + previewWidth + " previewHeight:" + previewHeight);
+        @Override
+        public void onOrientationChanged(final int rotation) {
+            int normalizedRotation = OrientationEventListener.ORIENTATION_UNKNOWN;
+            if (rotation >= 330 || rotation < 30) {
+                normalizedRotation = Surface.ROTATION_0;
+            } else if (rotation >= 60 && rotation < 120) {
+                normalizedRotation = Surface.ROTATION_90;
+            } else if (rotation >= 150 && rotation < 210) {
+                normalizedRotation = Surface.ROTATION_180;
+            } else if (rotation >= 240 && rotation < 300) {
+                normalizedRotation = Surface.ROTATION_270;
             }
 
-            int nW;
-            int nH;
-            int top;
-            int left;
-
-            float scale = 1.0f;
-
-            // Center the child SurfaceView within the parent.
-            if (width * previewHeight < height * previewWidth) {
-                Log.d(TAG, "center horizontally");
-                int scaledChildWidth = (int)((previewWidth * height / previewHeight) * scale);
-                nW = (width + scaledChildWidth) / 2;
-                nH = (int)(height * scale);
-                top = 0;
-                left = (width - scaledChildWidth) / 2;
+            if (prevOrientation != normalizedRotation && rotation != OrientationEventListener.ORIENTATION_UNKNOWN) {
+                prevOrientation = normalizedRotation;
+                if (normalizedRotation != OrientationEventListener.ORIENTATION_UNKNOWN)
+                    currentOrientation = normalizedRotation;
             }
-            else {
-                Log.d(TAG, "center vertically");
-                int scaledChildHeight = (int)((previewHeight * width / previewWidth) * scale);
-                nW = (int)(width * scale);
-                nH = (height + scaledChildHeight) / 2;
-                top = (height - scaledChildHeight) / 2;
-                left = 0;
-            }
-            child.layout(left, top, nW, nH);
 
-            Log.d("layout", "left:" + left);
-            Log.d("layout", "top:" + top);
-            Log.d("layout", "right:" + nW);
-            Log.d("layout", "bottom:" + nH);
         }
+
+        private void reportOrientationChanged(final int normalizedRotation) {
+
+            int defaultOrientation = getDeviceDefaultOrientation();
+            int orthogonalOrientation = defaultOrientation == Configuration.ORIENTATION_LANDSCAPE
+                    ? Configuration.ORIENTATION_PORTRAIT
+                    : Configuration.ORIENTATION_LANDSCAPE;
+
+            int toReportOrientation;
+            if (normalizedRotation == Surface.ROTATION_0 || normalizedRotation == Surface.ROTATION_180) {
+                toReportOrientation = defaultOrientation;
+            } else {
+                toReportOrientation = orthogonalOrientation;
+            }
+            this.currentOrientation = toReportOrientation;
+        }
+
+        /**
+         * Must determine what is default device orientation (some tablets can have default landscape). Must be initialized when device orientation is defined.
+         *
+         * @return value of {@link Configuration#ORIENTATION_LANDSCAPE} or {@link Configuration#ORIENTATION_PORTRAIT}
+         */
+        private int getDeviceDefaultOrientation() {
+            if (defaultScreenOrientation == Configuration.ORIENTATION_UNDEFINED) {
+                lock.lock();
+                defaultScreenOrientation = initDeviceDefaultOrientation(ctx);
+                lock.unlock();
+            }
+            return defaultScreenOrientation;
+        }
+
+        /**
+         * Provides device default orientation
+         *
+         * @return value of {@link Configuration#ORIENTATION_LANDSCAPE} or {@link Configuration#ORIENTATION_PORTRAIT}
+         */
+        private int initDeviceDefaultOrientation(Context context) {
+
+            WindowManager windowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
+            Configuration config = context.getResources().getConfiguration();
+            int rotation = windowManager.getDefaultDisplay().getRotation();
+
+            boolean isLand = config.orientation == Configuration.ORIENTATION_LANDSCAPE;
+            boolean isDefaultAxis = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_180;
+
+            int result;
+            if ((isDefaultAxis && isLand) || (!isDefaultAxis && !isLand)) {
+                result = Configuration.ORIENTATION_LANDSCAPE;
+            } else {
+                result = Configuration.ORIENTATION_PORTRAIT;
+            }
+            return result;
+        }
+
+        public int getCurrentOrientation() {
+            return currentOrientation;
+        }
+
     }
 
-    public void surfaceCreated(SurfaceHolder holder) {
-        // The Surface has been created, acquire the camera and tell it where
-        // to draw.
-        try {
+	/**
+     * Created by simone on 25/01/16.
+     */
+	public static class Preview extends RelativeLayout implements SurfaceHolder.Callback {
+        private final String TAG = "Preview";
+
+        CustomSurfaceView mSurfaceView;
+        SurfaceHolder mHolder;
+        Camera.Size mPreviewSize;
+        Camera.Size mPictureSize;
+        List<Camera.Size> mSupportedPreviewSizes;
+        List<Camera.Size> mSupportedPictureSizes;
+        Camera mCamera;
+        int cameraId;
+        int displayOrientation;
+
+        Preview(Context context) {
+            super(context);
+
+            mSurfaceView = new CustomSurfaceView(context);
+            addView(mSurfaceView);
+
+            requestLayout();
+
+            // Install a SurfaceHolder.Callback so we get notified when the
+            // underlying surface is created and destroyed.
+            mHolder = mSurfaceView.getHolder();
+            mHolder.addCallback(this);
+            mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        }
+
+        public void setCamera(Camera camera, int cameraId) {
+            mCamera = camera;
+            this.cameraId = cameraId;
             if (mCamera != null) {
-                mSurfaceView.setWillNotDraw(false);
-                mCamera.setPreviewDisplay(holder);
-            }
-        } catch (IOException exception) {
-            Log.e(TAG, "IOException caused by setPreviewDisplay()", exception);
-        }
-    }
-
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        // Surface will be destroyed when we return, so stop the preview.
-        if (mCamera != null) {
-            mCamera.stopPreview();
-        }
-    }
-
-    private Camera.Size getOptimalImageSize(List<Camera.Size> sizes, int w, int h, Camera.Size reference) {
-        final double ASPECT_TOLERANCE = 0.1;
-        double targetRatio = (double) w / h;
-        if (displayOrientation == 90 || displayOrientation == 270) {
-            targetRatio = (double) h / w;
-        }
-        if (sizes == null) return null;
-
-        Camera.Size optimalSize = null;
-        double minDiff = Double.MAX_VALUE;
-
-        int targetHeight = h;
-
-        Log.d(TAG, "Searching optimal size: aspect ratio " + targetRatio);
-
-        // Try to find an size match aspect ratio and size
-        for (Camera.Size size : sizes) {
-            double ratio = (double) size.width / size.height;
-            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
-            if (Math.abs(size.height - targetHeight) < minDiff) {
-                optimalSize = size;
-                minDiff = Math.abs(size.height - targetHeight);
-                Log.d(TAG, "Candidate w: " + optimalSize.width + " h: " + optimalSize.height +"; new height target threshold is " + minDiff);
-
-                if (reference != null && optimalSize.width >= reference.width && optimalSize.height >= reference.height) {
-                    Log.d(TAG, "Candidate closest to reference found; w: " + optimalSize.width + " h: " + optimalSize.height);
-                    return optimalSize;
+                mSupportedPictureSizes = mCamera.getParameters().getSupportedPictureSizes();
+                Collections.sort(mSupportedPictureSizes, new CameraSizeComparator());
+                for (Camera.Size s: mSupportedPictureSizes) {
+                    Log.d(TAG, "Supported picture size: " + s.width + "x" + s.height);
                 }
+
+                mSupportedPreviewSizes = mCamera.getParameters().getSupportedPreviewSizes();
+                Collections.sort(mSupportedPreviewSizes, new CameraSizeComparator());
+                for (Camera.Size s: mSupportedPreviewSizes) {
+                    Log.d(TAG, "Supported preview size: "+s.width+"x"+s.height);
+                }
+                setCameraDisplayOrientation();
+
+                // Issue 53
+                Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
+                Camera.Parameters params = mCamera.getParameters();
+                params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+                mCamera.setParameters(params);
             }
         }
 
-        // Cannot find the one match the aspect ratio, ignore the requirement
-        if (optimalSize == null) {
-        	// Issue 53
-        	Log.d(TAG, "No optimal size found, searching for widest preview");
-			optimalSize = sizes.get(0);
-			for(int i=0;i < sizes.size(); i++) {
-				Camera.Size s = sizes.get(i);
-				Log.d(TAG, "Size "+s.width+"x"+s.height);
-				if(s.width >= optimalSize.width) {
-					optimalSize = s;
+        public int getDisplayOrientation() {
+            return displayOrientation;
+        }
+
+        private void setCameraDisplayOrientation() {
+            Camera.CameraInfo info=new Camera.CameraInfo();
+            int rotation=
+                ((Activity)getContext()).getWindowManager().getDefaultDisplay()
+                             .getRotation();
+            int degrees=0;
+            DisplayMetrics dm=new DisplayMetrics();
+
+            Camera.getCameraInfo(cameraId, info);
+            ((Activity)getContext()).getWindowManager().getDefaultDisplay().getMetrics(dm);
+
+            switch (rotation) {
+                case Surface.ROTATION_0:
+                    degrees=0;
+                    break;
+                case Surface.ROTATION_90:
+                    degrees=90;
+                    break;
+                case Surface.ROTATION_180:
+                    degrees=180;
+                    break;
+                case Surface.ROTATION_270:
+                    degrees=270;
+                    break;
+            }
+
+            if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                displayOrientation=(info.orientation + degrees) % 360;
+                displayOrientation=(360 - displayOrientation) % 360;
+            } else {
+                displayOrientation=(info.orientation - degrees + 360) % 360;
+            }
+
+            Log.d(TAG, "screen is rotated " + degrees + "deg from natural");
+            Log.d(TAG, (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT ? "front" : "back")
+                + " camera is oriented -" + info.orientation + "deg from natural");
+            Log.d(TAG, "need to rotate preview " + displayOrientation + "deg");
+            mCamera.setDisplayOrientation(displayOrientation);
+        }
+
+        public void switchCamera(Camera camera, int cameraId) {
+            setCamera(camera, cameraId);
+            try {
+                camera.setPreviewDisplay(mHolder);
+                Camera.Parameters parameters = camera.getParameters();
+                parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+                parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
+                camera.setParameters(parameters);
+            }
+            catch (IOException exception) {
+                Log.e(TAG, exception.getMessage());
+            }
+            //requestLayout();
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            // We purposely disregard child measurements because act as a
+            // wrapper to a SurfaceView that centers the camera preview instead
+            // of stretching it.
+            final int width = resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec);
+            final int height = resolveSize(getSuggestedMinimumHeight(), heightMeasureSpec);
+            setMeasuredDimension(width, height);
+
+            if (mSupportedPreviewSizes != null) {
+                mPreviewSize = getOptimalImageSize(mSupportedPreviewSizes, width, height, null);
+            }
+            if (mSupportedPictureSizes != null) {
+                mPictureSize = getOptimalImageSize(mSupportedPictureSizes, width, height, mPreviewSize);
+            }
+        }
+
+        @Override
+        protected void onLayout(boolean changed, int l, int t, int r, int b) {
+
+            if (changed && getChildCount() > 0) {
+                final View child = getChildAt(0);
+
+                int width = r - l;
+                int height = b - t;
+
+                int previewWidth = width;
+                int previewHeight = height;
+
+                if (mPreviewSize != null) {
+                    previewWidth = mPreviewSize.width;
+                    previewHeight = mPreviewSize.height;
+
+                    if(displayOrientation == 90 || displayOrientation == 270) {
+                        previewWidth = mPreviewSize.height;
+                        previewHeight = mPreviewSize.width;
+                    }
+
+                    LOG.d(TAG, "previewWidth:" + previewWidth + " previewHeight:" + previewHeight);
+                }
+
+                int nW;
+                int nH;
+                int top;
+                int left;
+
+                float scale = 1.0f;
+
+                // Center the child SurfaceView within the parent.
+                if (width * previewHeight < height * previewWidth) {
+                    Log.d(TAG, "center horizontally");
+                    int scaledChildWidth = (int)((previewWidth * height / previewHeight) * scale);
+                    nW = (width + scaledChildWidth) / 2;
+                    nH = (int)(height * scale);
+                    top = 0;
+                    left = (width - scaledChildWidth) / 2;
+                }
+                else {
+                    Log.d(TAG, "center vertically");
+                    int scaledChildHeight = (int)((previewHeight * width / previewWidth) * scale);
+                    nW = (int)(width * scale);
+                    nH = (height + scaledChildHeight) / 2;
+                    top = (height - scaledChildHeight) / 2;
+                    left = 0;
+                }
+                child.layout(left, top, nW, nH);
+
+                Log.d("layout", "left:" + left);
+                Log.d("layout", "top:" + top);
+                Log.d("layout", "right:" + nW);
+                Log.d("layout", "bottom:" + nH);
+            }
+        }
+
+        public void surfaceCreated(SurfaceHolder holder) {
+            // The Surface has been created, acquire the camera and tell it where
+            // to draw.
+            try {
+                if (mCamera != null) {
+                    mSurfaceView.setWillNotDraw(false);
+                    mCamera.setPreviewDisplay(holder);
+                }
+            } catch (IOException exception) {
+                Log.e(TAG, "IOException caused by setPreviewDisplay()", exception);
+            }
+        }
+
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            // Surface will be destroyed when we return, so stop the preview.
+            if (mCamera != null) {
+                mCamera.stopPreview();
+            }
+        }
+
+        private Camera.Size getOptimalImageSize(List<Camera.Size> sizes, int w, int h, Camera.Size reference) {
+            final double ASPECT_TOLERANCE = 0.1;
+            double targetRatio = (double) w / h;
+            if (displayOrientation == 90 || displayOrientation == 270) {
+                targetRatio = (double) h / w;
+            }
+            if (sizes == null) return null;
+
+            Camera.Size optimalSize = null;
+            double minDiff = Double.MAX_VALUE;
+
+            int targetHeight = h;
+
+            Log.d(TAG, "Searching optimal size: aspect ratio " + targetRatio);
+
+            // Try to find an size match aspect ratio and size
+            for (Camera.Size size : sizes) {
+                double ratio = (double) size.width / size.height;
+                if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
+                if (Math.abs(size.height - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.height - targetHeight);
+                    Log.d(TAG, "Candidate w: " + optimalSize.width + " h: " + optimalSize.height +"; new height target threshold is " + minDiff);
+
                     if (reference != null && optimalSize.width >= reference.width && optimalSize.height >= reference.height) {
                         Log.d(TAG, "Candidate closest to reference found; w: " + optimalSize.width + " h: " + optimalSize.height);
                         return optimalSize;
                     }
-				}
-			}
+                }
+            }
+
+            // Cannot find the one match the aspect ratio, ignore the requirement
+            if (optimalSize == null) {
+                // Issue 53
+                Log.d(TAG, "No optimal size found, searching for widest preview");
+                optimalSize = sizes.get(0);
+                for(int i=0;i < sizes.size(); i++) {
+                    Camera.Size s = sizes.get(i);
+                    Log.d(TAG, "Size "+s.width+"x"+s.height);
+                    if(s.width >= optimalSize.width) {
+                        optimalSize = s;
+                        if (reference != null && optimalSize.width >= reference.width && optimalSize.height >= reference.height) {
+                            Log.d(TAG, "Candidate closest to reference found; w: " + optimalSize.width + " h: " + optimalSize.height);
+                            return optimalSize;
+                        }
+                    }
+                }
+            }
+
+            Log.d(TAG, "chosen size: w: " + optimalSize.width + " h: " + optimalSize.height);
+            return optimalSize;
         }
 
-        Log.d(TAG, "chosen size: w: " + optimalSize.width + " h: " + optimalSize.height);
-        return optimalSize;
-    }
+        public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+            if(mCamera != null) {
+                // Now that the size is known, set up the camera parameters and begin
+                // the preview.
+                Camera.Parameters parameters = mCamera.getParameters();
+                parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
+                parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
+                requestLayout();
 
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
-	    if(mCamera != null) {
-		    // Now that the size is known, set up the camera parameters and begin
-		    // the preview.
-		    Camera.Parameters parameters = mCamera.getParameters();
-            parameters.setPreviewSize(mPreviewSize.width, mPreviewSize.height);
-			parameters.setPictureSize(mPictureSize.width, mPictureSize.height);
-		    requestLayout();
-
-		    mCamera.setParameters(parameters);
-		    mCamera.startPreview();
-	    }
-    }
-
-    public byte[] getFramePicture(byte[] data, Camera camera) {
-        Camera.Parameters parameters = camera.getParameters();
-        int format = parameters.getPreviewFormat();
-
-        //YUV formats require conversion
-        if (format == ImageFormat.NV21 || format == ImageFormat.YUY2 || format == ImageFormat.NV16) {
-            int w = parameters.getPreviewSize().width;
-            int h = parameters.getPreviewSize().height;
-
-            // Get the YuV image
-            YuvImage yuvImage = new YuvImage(data, format, w, h, null);
-            // Convert YuV to Jpeg
-            Rect rect = new Rect(0, 0, w, h);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            yuvImage.compressToJpeg(rect, 80, outputStream);
-            return outputStream.toByteArray();
+                mCamera.setParameters(parameters);
+                mCamera.startPreview();
+            }
         }
-        return data;
-    }
-    public void setOneShotPreviewCallback(Camera.PreviewCallback callback) {
-        if(mCamera != null) {
-            mCamera.setOneShotPreviewCallback(callback);
+
+        public byte[] getFramePicture(byte[] data, Camera camera) {
+            Camera.Parameters parameters = camera.getParameters();
+            int format = parameters.getPreviewFormat();
+
+            //YUV formats require conversion
+            if (format == ImageFormat.NV21 || format == ImageFormat.YUY2 || format == ImageFormat.NV16) {
+                int w = parameters.getPreviewSize().width;
+                int h = parameters.getPreviewSize().height;
+
+                // Get the YuV image
+                YuvImage yuvImage = new YuvImage(data, format, w, h, null);
+                // Convert YuV to Jpeg
+                Rect rect = new Rect(0, 0, w, h);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                yuvImage.compressToJpeg(rect, 80, outputStream);
+                return outputStream.toByteArray();
+            }
+            return data;
+        }
+        public void setOneShotPreviewCallback(Camera.PreviewCallback callback) {
+            if(mCamera != null) {
+                mCamera.setOneShotPreviewCallback(callback);
+            }
+        }
+
+        public static class CustomSurfaceView extends SurfaceView implements SurfaceHolder.Callback{
+            private final String TAG = "CustomSurfaceView";
+
+            CustomSurfaceView(Context context){
+                super(context);
+            }
+
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+            }
+        }
+
+        public static class CameraSizeComparator implements Comparator<Camera.Size> {
+
+            @Override
+            public int compare(Camera.Size lhs, Camera.Size rhs) {
+                final int w = new Integer(lhs.width).compareTo(new Integer(rhs.width));
+                if (w != 0) {
+                    return w;
+                }
+
+                return new Integer(lhs.height).compareTo(new Integer(rhs.height));
+            }
         }
     }
 }
-class TapGestureDetector extends GestureDetector.SimpleOnGestureListener{
 
-	@Override
-	public boolean onDown(MotionEvent e) {
-		return false;
-	}
-
-	@Override
-	public boolean onSingleTapUp(MotionEvent e) {
-		return true;
-	}
-
-	@Override
-	public boolean onSingleTapConfirmed(MotionEvent e) {
-		return true;
-	}
-}
-class CustomSurfaceView extends SurfaceView implements SurfaceHolder.Callback{
-    private final String TAG = "CustomSurfaceView";
-
-    CustomSurfaceView(Context context){
-        super(context);
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-    }
-}

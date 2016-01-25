@@ -92,7 +92,6 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 					Boolean toBack = args.getBoolean(7);
 
 					fragment.defaultCamera = defaultCamera;
-					fragment.tapToTakePicture = tapToTakePicture;
 					fragment.dragEnabled = dragEnabled;
 					fragment.setRect(x, y, width, height);
 
