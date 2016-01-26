@@ -12,9 +12,9 @@
     switch (rotation){
         case -1: return UIDeviceOrientationUnknown;
         case 0: return UIDeviceOrientationPortrait;
-        case 1: return UIDeviceOrientationLandscapeLeft;
+        case 1: return UIDeviceOrientationLandscapeRight;
         case 2: return UIDeviceOrientationPortraitUpsideDown;
-        case 3: return UIDeviceOrientationLandscapeRight;
+        case 3: return UIDeviceOrientationLandscapeLeft;
         default: return UIDeviceOrientationUnknown;
     }
 }
