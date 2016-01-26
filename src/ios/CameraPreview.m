@@ -23,16 +23,12 @@
         CGFloat width = (CGFloat)[command.arguments[2] floatValue];
         CGFloat height = (CGFloat)[command.arguments[3] floatValue];
         NSString *defaultCamera = command.arguments[4];
-        BOOL tapToTakePicture = (BOOL)[command.arguments[5] boolValue];
-        BOOL dragEnabled = (BOOL)[command.arguments[6] boolValue];
-        BOOL toBack = (BOOL)[command.arguments[7] boolValue];
+        BOOL toBack = (BOOL)[command.arguments[5] boolValue];
         // Create the session manager
         self.sessionManager = [[CameraSessionManager alloc] init];
         
         //render controller setup
         self.cameraRenderController = [[CameraRenderController alloc] init];
-        self.cameraRenderController.dragEnabled = dragEnabled;
-        self.cameraRenderController.tapToTakePicture = tapToTakePicture;
         self.cameraRenderController.sessionManager = self.sessionManager;
         self.cameraRenderController.view.frame = CGRectMake(x, y, width, height);
         self.cameraRenderController.delegate = self;
@@ -44,10 +40,8 @@
             self.webView.opaque = NO;
             self.webView.backgroundColor = [UIColor clearColor];
             [self.viewController.view insertSubview:self.cameraRenderController.view atIndex:0];
-        }
-        else{
-            self.cameraRenderController.view.alpha = (CGFloat)[command.arguments[8] floatValue];
-            
+        } else {
+            self.cameraRenderController.view.alpha = (CGFloat)[command.arguments[6] floatValue];
             [self.viewController.view addSubview:self.cameraRenderController.view];
         }
         
@@ -130,46 +124,6 @@
 -(void) setOnPictureTakenHandler:(CDVInvokedUrlCommand*)command {
     NSLog(@"setOnPictureTakenHandler");
     self.onPictureTakenHandlerId = command.callbackId;
-}
-
--(void) setColorEffect:(CDVInvokedUrlCommand*)command {
-    NSLog(@"setColorEffect");
-    CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK];
-    NSString *filterName = command.arguments[0];
-    
-    if ([filterName isEqual: @"none"]) {
-        dispatch_async(self.sessionManager.sessionQueue, ^{
-            [self.sessionManager setCiFilter:nil];
-        });
-    } else if ([filterName isEqual: @"mono"]) {
-        dispatch_async(self.sessionManager.sessionQueue, ^{
-            CIFilter *filter = [CIFilter filterWithName:@"CIColorMonochrome"];
-            [filter setDefaults];
-            [self.sessionManager setCiFilter:filter];
-        });
-    } else if ([filterName isEqual: @"negative"]) {
-        dispatch_async(self.sessionManager.sessionQueue, ^{
-            CIFilter *filter = [CIFilter filterWithName:@"CIColorInvert"];
-            [filter setDefaults];
-            [self.sessionManager setCiFilter:filter];
-        });
-    } else if ([filterName isEqual: @"posterize"]) {
-        dispatch_async(self.sessionManager.sessionQueue, ^{
-            CIFilter *filter = [CIFilter filterWithName:@"CIColorPosterize"];
-            [filter setDefaults];
-            [self.sessionManager setCiFilter:filter];
-        });
-    } else if ([filterName isEqual: @"sepia"]) {
-        dispatch_async(self.sessionManager.sessionQueue, ^{
-            CIFilter *filter = [CIFilter filterWithName:@"CISepiaTone"];
-            [filter setDefaults];
-            [self.sessionManager setCiFilter:filter];
-        });
-    } else {
-        pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Filter not found"];
-    }
-    
-    [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
 - (void) takePicture:(CDVInvokedUrlCommand*)command {

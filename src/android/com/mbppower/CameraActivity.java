@@ -69,7 +69,6 @@ public class CameraActivity extends Fragment {
     // The first rear facing camera
     private int defaultCameraId;
 	public String defaultCamera;
-	public boolean dragEnabled;
 
 	public int width;
 	public int height;
@@ -124,67 +123,7 @@ public class CameraActivity extends Fragment {
 	        mainLayout = (FrameLayout) view.findViewById(getResources().getIdentifier("video_view", "id", appResourcesPackage));
 	        mainLayout.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
 	        mainLayout.addView(mPreview);
-	        mainLayout.setEnabled(false);
-
-	        getActivity().runOnUiThread(new Runnable() {
-		        @Override
-		        public void run() {
-			        frameContainerLayout.setClickable(true);
-			        frameContainerLayout.setOnTouchListener(new View.OnTouchListener() {
-
-				        private int mLastTouchX;
-				        private int mLastTouchY;
-				        private int mPosX = 0;
-				        private int mPosY = 0;
-
-				        @Override
-				        public boolean onTouch(View v, MotionEvent event) {
-					        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) frameContainerLayout.getLayoutParams();
-
-					        if (dragEnabled) {
-						        int x;
-						        int y;
-
-						        switch (event.getAction()) {
-							        case MotionEvent.ACTION_DOWN:
-										if(mLastTouchX == 0 || mLastTouchY == 0) {
-											mLastTouchX = (int)event.getRawX() - layoutParams.leftMargin;
-											mLastTouchY = (int)event.getRawY() - layoutParams.topMargin;
-										} else {
-											mLastTouchX = (int)event.getRawX();
-											mLastTouchY = (int)event.getRawY();
-										}
-								        break;
-							        case MotionEvent.ACTION_MOVE:
-
-								        x = (int) event.getRawX();
-								        y = (int) event.getRawY();
-
-								        final float dx = x - mLastTouchX;
-								        final float dy = y - mLastTouchY;
-
-								        mPosX += dx;
-								        mPosY += dy;
-
-								        layoutParams.leftMargin = mPosX;
-								        layoutParams.topMargin = mPosY;
-
-								        frameContainerLayout.setLayoutParams(layoutParams);
-
-								        // Remember this touch position for the next move event
-								        mLastTouchX = x;
-								        mLastTouchY = y;
-
-								        break;
-							        default:
-								        break;
-						        }
-					        }
-					        return true;
-				        }
-			        });
-		        }
-	        });
+			mainLayout.setEnabled(false);
         }
     }
 	

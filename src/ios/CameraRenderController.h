@@ -22,8 +22,6 @@
 @property (nonatomic) CIImage *latestFrame;
 @property (nonatomic) EAGLContext *context;
 @property (nonatomic) NSLock *renderLock;
-@property BOOL dragEnabled;
-@property BOOL tapToTakePicture;
 @property (nonatomic, assign) id delegate;
 
 @end

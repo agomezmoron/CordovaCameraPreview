@@ -47,15 +47,7 @@
         glBindRenderbuffer(GL_RENDERBUFFER, _renderBuffer);
 
         self.ciContext = [CIContext contextWithEAGLContext:self.context];
-
-        if (self.dragEnabled) {
-                //add drag action listener
-                NSLog(@"Enabling view dragging");
-                UIPanGestureRecognizer *drag = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-                [self.view addGestureRecognizer:drag];
-        }
-
-        self.view.userInteractionEnabled = self.dragEnabled || self.tapToTakePicture;
+        self.view.userInteractionEnabled = false;
 }
 
 - (void) viewWillAppear:(BOOL)animated {
@@ -114,6 +106,7 @@
                 [self.sessionManager.session stopRunning];
         });
 }
+
 //TODO:Use TEXTURE_2D
 -(void)captureOutput:(AVCaptureOutput *)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection *)connection {
         if ([self.renderLock tryLock]) {
