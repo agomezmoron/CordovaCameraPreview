@@ -7,6 +7,18 @@
 
 @implementation CameraPreview
 
++ (UIDeviceOrientation) fromRotation: (NSInteger) rotation {
+    
+    switch (rotation){
+        case -1: return UIDeviceOrientationUnknown;
+        case 0: return UIDeviceOrientationPortrait;
+        case 1: return UIDeviceOrientationLandscapeLeft;
+        case 2: return UIDeviceOrientationPortraitUpsideDown;
+        case 3: return UIDeviceOrientationLandscapeRight;
+        default: return UIDeviceOrientationUnknown;
+    }
+}
+
 - (void) startCamera:(CDVInvokedUrlCommand*)command {
     
     CDVPluginResult *pluginResult;
@@ -24,6 +36,7 @@
         CGFloat height = (CGFloat)[command.arguments[3] floatValue];
         NSString *defaultCamera = command.arguments[4];
         BOOL toBack = (BOOL)[command.arguments[5] boolValue];
+        self.lockOrientation = [CameraPreview fromRotation: (NSInteger)[command.arguments[6] integerValue]];
         // Create the session manager
         self.sessionManager = [[CameraSessionManager alloc] init];
         
@@ -41,7 +54,7 @@
             self.webView.backgroundColor = [UIColor clearColor];
             [self.viewController.view insertSubview:self.cameraRenderController.view atIndex:0];
         } else {
-            self.cameraRenderController.view.alpha = (CGFloat)[command.arguments[6] floatValue];
+            self.cameraRenderController.view.alpha = (CGFloat)[command.arguments[7] floatValue];
             [self.viewController.view addSubview:self.cameraRenderController.view];
         }
         
@@ -167,7 +180,9 @@
             CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Camera not started"];
             [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
         } else {
-            UIDeviceOrientation currentOrientation = [[UIDevice currentDevice] orientation];
+            UIDeviceOrientation currentOrientation = self.lockOrientation != UIDeviceOrientationUnknown
+                                                   ? self.lockOrientation
+                                                   : [[UIDevice currentDevice] orientation];
             
             NSData *imageData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:sampleBuffer];
             NSLog(@"Captured image");

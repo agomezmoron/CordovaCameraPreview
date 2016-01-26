@@ -85,9 +85,10 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 					int height = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, args.getInt(3), metrics);
 					String defaultCamera = args.getString(4);
 					Boolean toBack = args.getBoolean(5);
-
+					int lockRotation = args.getInt(6);
 					fragment.defaultCamera = defaultCamera;
 					fragment.setRect(x, y, width, height);
+                    fragment.lockRotation = lockRotation;
 
 					//create or update the layout params for the container view
 					FrameLayout containerView = (FrameLayout)cordova.getActivity().findViewById(containerViewId);
@@ -105,7 +106,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 					}
 					else{
 						//set camera back to front
-						containerView.setAlpha(Float.parseFloat(args.getString(6)));
+						containerView.setAlpha(Float.parseFloat(args.getString(7)));
 						containerView.bringToFront();
 					}
 

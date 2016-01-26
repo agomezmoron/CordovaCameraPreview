@@ -47,6 +47,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class CameraActivity extends Fragment {
 
+	public static final int FREE_ROTATION = -1;
+
 	public interface CameraPreviewListener {
 		public void onPictureTaken(String originalPicturePath, String previewPicturePath);
 	}
@@ -69,6 +71,7 @@ public class CameraActivity extends Fragment {
     // The first rear facing camera
     private int defaultCameraId;
 	public String defaultCamera;
+    public int lockRotation;
 
 	public int width;
 	public int height;
@@ -105,7 +108,7 @@ public class CameraActivity extends Fragment {
 
 	private void createCameraPreview(){
 
-		if (orientationListener == null) {
+		if (orientationListener == null && lockRotation == FREE_ROTATION) {
 			orientationListener = new SimpleOrientationListener(this.getActivity().getApplicationContext());
 		}
 
@@ -148,7 +151,9 @@ public class CameraActivity extends Fragment {
     @Override
     public void onResume() {
         super.onResume();
-		orientationListener.enable();
+        if (lockRotation == FREE_ROTATION) {
+            orientationListener.enable();
+        }
 
         mCamera = Camera.open(defaultCameraId);
 
@@ -188,7 +193,9 @@ public class CameraActivity extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-		orientationListener.disable();
+        if (lockRotation == FREE_ROTATION) {
+            orientationListener.disable();
+        }
         // Because the Camera object is a shared resource, it's very
         // important to release it when the activity is paused.
         if (mCamera != null) {
@@ -269,8 +276,10 @@ public class CameraActivity extends Fragment {
 
 				@Override
 				public void onPictureTaken(byte[] data, Camera camera) {
-
-					final int orientation = orientationListener.getCurrentOrientation();
+					
+					final int orientation = lockRotation >= 0
+                                          ? lockRotation
+                                          : orientationListener.getCurrentOrientation();
 					Log.d(TAG, "Current device orientation: " + orientation);
 
 					final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
