@@ -50,7 +50,7 @@ public class CameraActivity extends Fragment {
 	public static final int FREE_ROTATION = -1;
 
 	public interface CameraPreviewListener {
-		public void onPictureTaken(String originalPicturePath, String previewPicturePath);
+		public void onPictureTaken(String originalPicturePath);
 	}
 
 	private CameraPreviewListener eventListener;
@@ -320,7 +320,7 @@ public class CameraActivity extends Fragment {
 						fos.close();
 						new Thread() {
 							public void run() {
-								eventListener.onPictureTaken("file://"+pictureFile.getAbsolutePath(), "file://"+pictureFile.getAbsolutePath());
+								eventListener.onPictureTaken(pictureFile.getName());
 							}
 						}.start();
 					} catch (FileNotFoundException e) {
@@ -340,48 +340,13 @@ public class CameraActivity extends Fragment {
 			canTakePicture = true;
 		}
 	}
-    private void generatePictureFromView(final Bitmap originalPicture, final Bitmap picture){
-
-	    final FrameLayout cameraLoader = (FrameLayout)view.findViewById(getResources().getIdentifier("camera_loader", "id", appResourcesPackage));
-	    cameraLoader.setVisibility(View.VISIBLE);
-	    final ImageView pictureView = (ImageView) view.findViewById(getResources().getIdentifier("picture_view", "id", appResourcesPackage));
-	    new Thread() {
-		    public void run() {
-
-			    try {
-				    final File picFile = storeImage(picture, "_preview");
-				    final File originalPictureFile = storeImage(originalPicture, "_original");
-
-					eventListener.onPictureTaken(originalPictureFile.getAbsolutePath(), picFile.getAbsolutePath());
-
-				    getActivity().runOnUiThread(new Runnable() {
-					    @Override
-					    public void run() {
-				            cameraLoader.setVisibility(View.INVISIBLE);
-						    pictureView.setImageBitmap(null);
-					    }
-				    });
-			    }
-			    catch(Exception e){
-				    //An unexpected error occurred while saving the picture.
-				    getActivity().runOnUiThread(new Runnable() {
-					    @Override
-					    public void run() {
-				            cameraLoader.setVisibility(View.INVISIBLE);
-						    pictureView.setImageBitmap(null);
-					    }
-				    });
-			    }
-		    }
-	    }.start();
-    }
 
     private File getOutputMediaFile(String suffix){
 
 	    File mediaStorageDir = getActivity().getApplicationContext().getFilesDir();
         if (! mediaStorageDir.exists()){
             if (! mediaStorageDir.mkdirs()){
-                return null;
+                throw new IllegalStateException("Directory "+mediaStorageDir.getAbsolutePath()+" does not exist.");
             }
         }
         // Create a media file name
@@ -394,17 +359,15 @@ public class CameraActivity extends Fragment {
 
     private File storeImage(Bitmap image, String suffix) {
         File pictureFile = getOutputMediaFile(suffix);
-        if (pictureFile != null) {
-            try {
-                FileOutputStream fos = new FileOutputStream(pictureFile);
-                image.compress(Bitmap.CompressFormat.JPEG, 80, fos);
-                fos.close();
-                return pictureFile;
-            }
-            catch (Exception ex) {
-            }
-        }
-        return null;
+        try {
+			FileOutputStream fos = new FileOutputStream(pictureFile);
+			image.compress(Bitmap.CompressFormat.JPEG, 80, fos);
+			fos.close();
+			return pictureFile;
+		} catch (Exception ex) {
+			throw new IllegalStateException(ex);
+		}
+
     }
 
 	public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {

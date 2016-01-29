@@ -154,9 +154,8 @@
 }
 
 + (NSString *) applicationDocumentsDirectory {
-    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
-    NSString *basePath = ([paths count] > 0) ? [paths objectAtIndex:0] : nil;
-    return basePath;
+    NSString *path = [NSSearchPathForDirectoriesInDomains(NSLibraryDirectory, NSUserDomainMask, YES) objectAtIndex:0];
+    return [path stringByAppendingPathComponent:@"NoCloud"]; // cordova.file.dataDirectory
 }
 
 + (NSString *)saveImage:(UIImage *)image withName:(NSString *)name {
@@ -244,7 +243,7 @@
             dispatch_group_notify(group, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
                 NSMutableArray *params = [[NSMutableArray alloc] init];
                 
-                [params addObject:originalPicturePath];
+                [params addObject:fileName];
                 
                 CDVPluginResult *pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsArray:params];
                 [pluginResult setKeepCallbackAsBool:true];
