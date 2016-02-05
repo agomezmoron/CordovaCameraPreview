@@ -54,9 +54,9 @@
 
                 AVCaptureDevice *videoDevice = [CameraSessionManager deviceWithMediaType:AVMediaTypeVideo preferringPosition:self.defaultCamera];
 
-                if ([videoDevice hasFlash] && [videoDevice isFlashModeSupported:AVCaptureFlashModeAuto]) {
+                if ([videoDevice hasFlash] && [videoDevice isFlashModeSupported:AVCaptureFlashModeOff]) {
                         if ([videoDevice lockForConfiguration:&error]) {
-                                [videoDevice setFlashMode:AVCaptureFlashModeAuto];
+                                [videoDevice setFlashMode:AVCaptureFlashModeOff];
                                 [videoDevice unlockForConfiguration];
                         } else {
                                 NSLog(@"Error during AV device setup: %@", error);
@@ -194,5 +194,48 @@
 
         return captureDevice;
 }
+
+- (void) setFlashMode:(NSInteger) mode {
+    NSError *error = nil;
+    AVCaptureDevice *videoDevice = [CameraSessionManager deviceWithMediaType:AVMediaTypeVideo preferringPosition:self.defaultCamera];
+    if ([videoDevice lockForConfiguration:&error]) {
+        switch (mode) {
+            case 0: //AUTO
+                [self setTorch:videoDevice mode:AVCaptureTorchModeOff];
+                [self setFlash:videoDevice mode:AVCaptureFlashModeAuto];
+                break;
+            case 1: //ON
+                [self setTorch:videoDevice mode:AVCaptureTorchModeOff];
+                [self setFlash:videoDevice mode:AVCaptureFlashModeOn];
+                break;
+            case 2: //OFF
+                [self setTorch:videoDevice mode:AVCaptureTorchModeOff];
+                [self setFlash:videoDevice mode:AVCaptureFlashModeOff];
+                break;
+            case 3: //TORCH
+                [self setFlash:videoDevice mode:AVCaptureFlashModeOff];
+                [self setTorch:videoDevice mode:AVCaptureTorchModeOn];
+                break;
+            default:
+                break;
+        }
+        [videoDevice unlockForConfiguration];
+    } else {
+        NSLog(@"Error during AV device setup: %@", error);
+    }
+}
+
+- (void) setFlash:(AVCaptureDevice *)device mode:(AVCaptureFlashMode) mode {
+    if ([device hasFlash] && [device isFlashModeSupported:mode]) {
+        [device setFlashMode:mode];
+    }
+}
+
+- (void) setTorch:(AVCaptureDevice *)device mode:(AVCaptureTorchMode) mode {
+    if ([device hasTorch] && [device isTorchModeSupported:mode]) {
+        [device setTorchMode: mode];
+    }
+}
+
 
 @end

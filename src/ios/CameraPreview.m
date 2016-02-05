@@ -134,10 +134,16 @@
     [self.commandDelegate sendPluginResult:pluginResult callbackId:command.callbackId];
 }
 
--(void) setOnPictureTakenHandler:(CDVInvokedUrlCommand*)command {
+- (void) setOnPictureTakenHandler:(CDVInvokedUrlCommand*)command {
     NSLog(@"setOnPictureTakenHandler");
     self.onPictureTakenHandlerId = command.callbackId;
 }
+
+- (void) setFlashMode:(CDVInvokedUrlCommand *)command {
+    NSInteger mode = [command.arguments[0] integerValue];
+    [self.sessionManager setFlashMode:mode];
+}
+
 
 - (void) takePicture:(CDVInvokedUrlCommand*)command {
     NSLog(@"takePicture");
