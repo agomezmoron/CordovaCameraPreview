@@ -25,6 +25,7 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 	private final String takePictureAction = "takePicture";
 	private final String showCameraAction = "showCamera";
 	private final String hideCameraAction = "hideCamera";
+	private final String setFlashModeAction = "setFlashMode";
 
 	private CameraActivity fragment;
 	private CallbackContext takePictureCallbackContext;
@@ -58,6 +59,9 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 		}
 		else if (switchCameraAction.equals(action)){
 			return switchCamera(args, callbackContext);
+		}
+		else if (setFlashModeAction.equals(action)) {
+			return setFlashMode(args, callbackContext);
 		}
 
 		return false;
@@ -210,5 +214,30 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 		Log.d(TAG, "setOnPictureTakenHandler");
 		takePictureCallbackContext = callbackContext;
 		return true;
+	}
+
+	private boolean setFlashMode(JSONArray args, CallbackContext callbackContext) {
+		try {
+			int mode = args.getInt(0);
+			switch(mode) {
+				case 0:
+					fragment.setFlashMode(Camera.Parameters.FLASH_MODE_AUTO);
+					break;
+				case 1:
+					fragment.setFlashMode(Camera.Parameters.FLASH_MODE_ON);
+					break;
+				case 2:
+					fragment.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+					break;
+				case 3:
+					fragment.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+					break;
+				default:
+					throw new IllegalArgumentException(String.format("Unknow flash mode %d", mode));
+			}
+			return true;
+		} catch (JSONException ex) {
+			throw new IllegalArgumentException(ex);
+		}
 	}
 }

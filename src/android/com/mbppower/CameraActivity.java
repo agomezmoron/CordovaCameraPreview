@@ -403,6 +403,15 @@ public class CameraActivity extends Fragment {
         super.onDestroy();
     }
 
+    public void setFlashMode(String mode) {
+        final Camera.Parameters parameters = mCamera.getParameters();
+        if (!parameters.getSupportedFlashModes().contains(mode)) {
+            throw new IllegalArgumentException("Unsupported flash mode "+ mode);
+        }
+        parameters.setFlashMode(mode);
+        mCamera.setParameters(parameters);
+    }
+
 	public static class SimpleOrientationListener extends OrientationEventListener {
 
         private volatile int defaultScreenOrientation = Configuration.ORIENTATION_UNDEFINED;

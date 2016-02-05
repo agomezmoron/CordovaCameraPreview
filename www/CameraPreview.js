@@ -12,6 +12,11 @@ CameraPreview.ROTATION_LANDSCAPE_RIGHT = 1; // 90°
 CameraPreview.ROTATION_PORTRAIT_UPSIDE_DOWN = 2; // 180°
 CameraPreview.ROTATION_LANDSCAPE_LEFT = 3; // 270°
 
+CameraPreview.FLASH_AUTO = 0;
+CameraPreview.FLASH_ON = 1;
+CameraPreview.FLASH_OFF = 2;
+CameraPreview.FLASH_TORCH = 3;
+
 CameraPreview.setOnPictureTakenHandler = function(onPictureTaken) {
   exec(onPictureTaken, onPictureTaken, PLUGIN_NAME, "setOnPictureTakenHandler", []);
 };
@@ -53,5 +58,7 @@ CameraPreview.show = function() {
 CameraPreview.disable = function(disable) {
   exec(null, null, PLUGIN_NAME, "disable", [disable]);
 };
-
+CameraPreview.setFlashMode = function(mode) {
+  exec(null, null, PLUGIN_NAME, "setFlashMode", [mode]);
+}
 module.exports = CameraPreview;
