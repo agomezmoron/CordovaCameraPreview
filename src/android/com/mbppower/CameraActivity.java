@@ -72,6 +72,7 @@ public class CameraActivity extends Fragment {
     private int defaultCameraId;
 	public String defaultCamera;
     public int lockRotation;
+    public String filePrefix;
 
 	public int width;
 	public int height;
@@ -307,7 +308,7 @@ public class CameraActivity extends Fragment {
 					}
 					final Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
 
-					final File pictureFile = getOutputMediaFile("jpg");
+					final File pictureFile = getOutputMediaFile(filePrefix, "jpg");
 					if (pictureFile == null){
 						Log.d(TAG, "Cannot save a null picture ");
 						canTakePicture = true;
@@ -341,7 +342,7 @@ public class CameraActivity extends Fragment {
 		}
 	}
 
-    private File getOutputMediaFile(String suffix){
+    private File getOutputMediaFile(String prefix, String suffix){
 
 	    File mediaStorageDir = getActivity().getApplicationContext().getFilesDir();
         if (! mediaStorageDir.exists()){
@@ -352,25 +353,12 @@ public class CameraActivity extends Fragment {
         // Create a media file name
         String timeStamp = new SimpleDateFormat("dd_MM_yyyy_HHmm_ss").format(new Date());
         File mediaFile;
-        String mImageName = "camerapreview_" + timeStamp + suffix + ".jpg";
+        String mImageName = prefix + timeStamp + suffix + ".jpg";
         mediaFile = new File(mediaStorageDir.getPath() + File.separator + mImageName);
         return mediaFile;
     }
 
-    private File storeImage(Bitmap image, String suffix) {
-        File pictureFile = getOutputMediaFile(suffix);
-        try {
-			FileOutputStream fos = new FileOutputStream(pictureFile);
-			image.compress(Bitmap.CompressFormat.JPEG, 80, fos);
-			fos.close();
-			return pictureFile;
-		} catch (Exception ex) {
-			throw new IllegalStateException(ex);
-		}
-
-    }
-
-	public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
+    public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
 		// Raw height and width of image
 		final int height = options.outHeight;
 		final int width = options.outWidth;

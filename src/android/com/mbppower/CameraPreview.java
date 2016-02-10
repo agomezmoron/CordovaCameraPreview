@@ -90,9 +90,11 @@ public class CameraPreview extends CordovaPlugin implements CameraActivity.Camer
 					String defaultCamera = args.getString(4);
 					Boolean toBack = args.getBoolean(5);
 					int lockRotation = args.getInt(6);
+					String filePrefix = args.isNull(8) ? "picture" : args.getString(8);
 					fragment.defaultCamera = defaultCamera;
 					fragment.setRect(x, y, width, height);
                     fragment.lockRotation = lockRotation;
+					fragment.filePrefix = filePrefix;
 
 					//create or update the layout params for the container view
 					FrameLayout containerView = (FrameLayout)cordova.getActivity().findViewById(containerViewId);

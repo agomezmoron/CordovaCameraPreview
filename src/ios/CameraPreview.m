@@ -37,6 +37,7 @@
         NSString *defaultCamera = command.arguments[4];
         BOOL toBack = (BOOL)[command.arguments[5] boolValue];
         self.lockOrientation = [CameraPreview fromRotation: (NSInteger)[command.arguments[6] integerValue]];
+        self.filePrefix = command.arguments.count > 8 ? command.arguments[8] : @"picture";
         // Create the session manager
         self.sessionManager = [[CameraSessionManager alloc] init];
         
@@ -239,7 +240,7 @@
             
             NSLog(@"Saving image");
             __block NSString *originalPicturePath;
-            NSString *fileName = [[[NSUUID UUID] UUIDString] stringByAppendingString:@".jpg"];
+            NSString *fileName = [self.filePrefix stringByAppendingString:[[[NSUUID UUID] UUIDString] stringByAppendingString:@".jpg"]];
             CIContext *context = [CIContext contextWithOptions:nil];
             UIImage *saveUIImage = [UIImage imageWithCGImage:[context createCGImage:finalCImage fromRect:finalCImage.extent]];
             originalPicturePath = [CameraPreview saveImage: saveUIImage withName: fileName];

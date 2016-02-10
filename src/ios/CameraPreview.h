@@ -22,5 +22,6 @@
 @property (nonatomic) CameraRenderController *cameraRenderController;
 @property (nonatomic) NSString *onPictureTakenHandlerId;
 @property (nonatomic) UIDeviceOrientation lockOrientation;
+@property (nonatomic) NSString *filePrefix;
 
 @end

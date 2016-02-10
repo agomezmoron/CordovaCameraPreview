@@ -23,10 +23,10 @@ CameraPreview.setOnPictureTakenHandler = function(onPictureTaken) {
 
 //@param rect {x: 0, y: 0, width: 100, height:100}
 //@param defaultCamera "front" | "back"
-CameraPreview.startCamera = function(rect, defaultCamera, toBack, rotation, alpha) {
+CameraPreview.startCamera = function(rect, defaultCamera, toBack, rotation, alpha, prefix) {
   if (typeof(alpha) === 'undefined') alpha = 1;
   return new Promise(function(resolve, reject){
-    exec(resolve, reject, PLUGIN_NAME, "startCamera", [rect.x, rect.y, rect.width, rect.height, defaultCamera, !!toBack, rotation, alpha]);
+    exec(resolve, reject, PLUGIN_NAME, "startCamera", [rect.x, rect.y, rect.width, rect.height, defaultCamera, !!toBack, rotation, alpha, prefix]);
   });
 };
 CameraPreview.stopCamera = function() {
