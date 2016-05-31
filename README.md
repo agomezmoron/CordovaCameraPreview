@@ -19,13 +19,13 @@ Show camera preview popup on top of the HTML.<br/>
 <p><b>Installation:</b></p>
 
 ```
-cordova plugin add https://github.com/mbppower/CordovaCameraPreview.git
+cordova plugin add https://github.com/agomezmoron/CordovaCameraPreview
 ```
 
 <b>Phonegap Build:</b><br/>
 
 ```
-<gap:plugin name="com.mbppower.camerapreview" version="0.0.8" source="plugins.cordova.io" />
+<plugin spec="https://github.com/agomezmoron/CordovaCameraPreview" source="git" />
 ```
 
 <p><b>Methods:</b></p>
@@ -71,7 +71,6 @@ cordova.plugins.camerapreview.takePicture({maxWidth:640, maxHeight:640});
 ```
 cordova.plugins.camerapreview.setOnPictureTakenHandler(function(result){
 	document.getElementById('originalPicture').src = result[0];//originalPicturePath;
-	document.getElementById('previewPicture').src = result[1];//previewPicturePath;
 });
 ```
 
