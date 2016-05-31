@@ -321,7 +321,7 @@ public class CameraActivity extends Fragment {
 						fos.close();
 						new Thread() {
 							public void run() {
-								eventListener.onPictureTaken(pictureFile.getName());
+								eventListener.onPictureTaken(pictureFile.getAbsolutePath());
 							}
 						}.start();
 					} catch (FileNotFoundException e) {
