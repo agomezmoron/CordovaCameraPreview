@@ -549,7 +549,7 @@ public class CameraActivity extends Fragment {
                 // Issue 53
                 Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
                 Camera.Parameters params = mCamera.getParameters();
-                List<String> focusModes = parameters.getSupportedFocusModes();
+                List<String> focusModes = mCamera.getParameters().getSupportedFocusModes();
                 if (focusModes.contains(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                     params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
                 }
