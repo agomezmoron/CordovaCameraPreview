@@ -552,6 +552,9 @@ public class CameraActivity extends Fragment {
                 List<String> focusModes = mCamera.getParameters().getSupportedFocusModes();
                 if (focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                     params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+                } else if (focusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+                    // if continuous focus picture is not supported, using the auto one
+                    params.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
                 }
                 mCamera.setParameters(params);
             }
