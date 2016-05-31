@@ -130,12 +130,12 @@ public class CameraActivity extends Fragment {
 			mainLayout.setEnabled(false);
         }
     }
-	
+
     private void setDefaultCameraId(){
-		
+
 		// Find the total number of cameras available
         numberOfCameras = Camera.getNumberOfCameras();
-		
+
 		int camId = defaultCamera.equals("front") ? Camera.CameraInfo.CAMERA_FACING_FRONT : Camera.CameraInfo.CAMERA_FACING_BACK;
 
 		// Find the ID of the default camera
@@ -148,7 +148,7 @@ public class CameraActivity extends Fragment {
 			}
 		}
 	}
-	
+
     @Override
     public void onResume() {
         super.onResume();
@@ -163,7 +163,7 @@ public class CameraActivity extends Fragment {
         }
 
         cameraCurrentlyLocked = defaultCameraId;
-        
+
         if(mPreview.mPreviewSize == null){
 		    mPreview.setCamera(mCamera, cameraCurrentlyLocked);
         } else {
@@ -263,21 +263,21 @@ public class CameraActivity extends Fragment {
         canvas.drawBitmap(bitmap, -rect.left, -rect.top, null);
         return ret;
     }
-	
+
 	public void takePicture(final double maxWidth, final double maxHeight){
 		final ImageView pictureView = (ImageView) view.findViewById(getResources().getIdentifier("picture_view", "id", appResourcesPackage));
 		if(mPreview != null) {
-			
+
 			if(!canTakePicture)
 				return;
-			
+
 			canTakePicture = false;
 
 			final Camera.PictureCallback mPicture = new Camera.PictureCallback() {
 
 				@Override
 				public void onPictureTaken(byte[] data, Camera camera) {
-					
+
 					final int orientation = lockRotation >= 0
                                           ? lockRotation
                                           : orientationListener.getCurrentOrientation();
@@ -377,7 +377,7 @@ public class CameraActivity extends Fragment {
 		}
 		return inSampleSize;
 	}
-	
+
     private Bitmap loadBitmapFromView(View v) {
         Bitmap b = Bitmap.createBitmap( v.getMeasuredWidth(), v.getMeasuredHeight(), Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);
@@ -385,7 +385,7 @@ public class CameraActivity extends Fragment {
         v.draw(c);
         return b;
     }
-    
+
     @Override
     public void onDestroy() {
         super.onDestroy();
@@ -550,7 +550,7 @@ public class CameraActivity extends Fragment {
                 Log.d(TAG, "setting camera in FOCUS MODE CONTINUOUS PICTURE");
                 Camera.Parameters params = mCamera.getParameters();
                 List<String> focusModes = mCamera.getParameters().getSupportedFocusModes();
-                if (focusModes.contains(Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+                if (focusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
                     params.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
                 }
                 mCamera.setParameters(params);
