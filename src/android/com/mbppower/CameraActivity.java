@@ -48,6 +48,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class CameraActivity extends Fragment {
 
 	public static final int FREE_ROTATION = -1;
+        private static int CAMERA_FACING;
 
 	public interface CameraPreviewListener {
 		public void onPictureTaken(String originalPicturePath);
@@ -285,27 +286,38 @@ public class CameraActivity extends Fragment {
 
 					final Bitmap bitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
 					final Matrix matrix = new Matrix();
+
+                    float rotation;
+
 					switch(orientation){
 						case Surface.ROTATION_0:
-							matrix.postRotate(90);
-							Log.d(TAG, "Rotating 90°");
+                            // Prevent pictures taken with front camera to be upside down
+                            if(CAMERA_FACING == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                                rotation = -90;
+                            } else {
+                                rotation = 90;
+                            }
 							break;
 						case Surface.ROTATION_90:
-							matrix.postRotate(180);
-							Log.d(TAG, "Rotating 180°");
+                            rotation = 180;
 							break;
 						case Surface.ROTATION_180:
-							matrix.postRotate(-90);
-							Log.d(TAG, "Rotating -90°");
+                            // Prevent pictures taken with front camera to be upside down
+                            if(CAMERA_FACING == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+                                rotation = -270;
+                            } else {
+                                rotation = -90;
+                            }
 							break;
 						case Surface.ROTATION_270:
-							matrix.postRotate(0);
-							Log.d(TAG, "Rotating 0°");
+                            rotation = 0;
 							break;
 						default:
-							matrix.postRotate(0);
+                            rotation = 0;
 							Log.d(TAG, "Rotating 0° (unknown orientation)");
 					}
+                    matrix.postRotate(rotation);
+                    Log.d(TAG, "Rotating " + rotation + "º");
 					final Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
 
 					final File pictureFile = getOutputMediaFile(filePrefix, "jpg");
@@ -589,6 +601,8 @@ public class CameraActivity extends Fragment {
                     degrees=270;
                     break;
             }
+
+            CAMERA_FACING = info.facing;
 
             if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
                 displayOrientation=(info.orientation + degrees) % 360;
