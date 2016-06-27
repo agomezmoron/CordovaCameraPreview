@@ -256,6 +256,7 @@
                 [pluginResult setKeepCallbackAsBool : true];
                 NSLog(@"Dispatching result");
                 [self.commandDelegate sendPluginResult : pluginResult callbackId : self.onPictureTakenHandlerId];
+                [self.commandDelegate sendPluginResult : pluginResult callbackId : command.callbackId];
             });
         }
     }
