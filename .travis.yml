@@ -1,0 +1,12 @@
+language: node_js
+node_js: node
+install:
+  npm install
+deploy:
+  provider: npm
+  email: agommor@gmail.com
+  api_key:
+    secure: TV7gX1sNwb/+KHf5Kh8D1SzKwHe11h6V1ScyNznaWB5qopnF5chphGwWW/2QQE3XKGA5KcBTI8z2PMqz7IW+wIg4okt2b3j5PH+yfqzI5m1L01l4aAM0PIu5edLBofED3lpNO1o9UgUJCgSaQKLGC7uy74+67Xu55yusyHk2bnFtLERG4v8XWvk2klFOV46f7HeUsnJ3UPNUgq9v2Ha2sbTjwgjykJqu9H9iSfAyE2hte5nJC2hVyX07taIooDQlwqxYl3m80gnLOWw4/Q/dLh/Ll9HU31msJFA6RWEptPdH20W6GJtkvYEf1tWqtRJGPHrs+ESuYma2Ko//6+G84aaTu/GEefjRzfIcR5vQ+vhqjM2NK7pbuWAW5sxYTijfECXmIU8XCPxxZWNhJfLpMXSV/VeknW1GA8wVu+0k7m2jGqRofuZ6dqwZbMFi6hD+VJJfbFvKer56WEjN0xW/is/0cXwg4ThjxPEnnb9zXWjwu+fWNr2158cIYZglPqbNhLuv8OAQ2hJ1/GOurVU3uVYJC2ulxKJMea8SLxxFeMG/cQ4pUD+7/y9xgt7dWMze9qvCWuZ4RjJ5lpv7IQfZE6uTZtwRfkyjI4PcJrpLFKR2UIuRjgJAUYhJHYYMcsD0uLoqccy5fs5mHnaK/CnmPl1ImIUERNXCYDE3mt2OgS0=
+  on:
+    repo: agomezmoron/angular-promise-timeout-decorator
+    branch: master
