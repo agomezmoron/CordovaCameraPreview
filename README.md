@@ -104,6 +104,7 @@ Method <i>readAsDataURL</i>: Read file and return data as a base64-encoded data 
 ### Using with CrossWalk
 
 If you have CrossWalk enabled, if you want to render the camera on the top, be sure the following preferences are set like:
-
+```
    <preference name="xwalkZOrderOnTop" value="false" />
    <preference name="CrosswalkAnimatable" value="true" />
+```
