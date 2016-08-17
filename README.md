@@ -100,3 +100,10 @@ cordova.plugins.camerapreview.hide();
 Use the cordova-file in order to read the picture file and them get the base64.<br/>
 Please, refer to this documentation: http://docs.phonegap.com/en/edge/cordova_file_file.md.html<br/>
 Method <i>readAsDataURL</i>: Read file and return data as a base64-encoded data URL.
+
+### Using with CrossWalk
+
+If you have CrossWalk enabled, if you want to render the camera on the top, be sure the following preferences are set like:
+
+   <preference name="xwalkZOrderOnTop" value="false" />
+   <preference name="CrosswalkAnimatable" value="true" />
