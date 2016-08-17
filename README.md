@@ -16,6 +16,10 @@ Show camera preview popup on top of the HTML.<br/>
   <li>Maintain HTML interactivity.</li>
 </ul>
 
+Example:
+
+<img src="docs/img/Screenshot.png" height="400px" />
+
 <p><b>Installation:</b></p>
 
 ```
